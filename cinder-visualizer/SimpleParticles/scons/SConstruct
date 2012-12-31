@@ -1,0 +1,19 @@
+env = Environment()
+
+env['APP_TARGET'] = 'SimpleParticlesApp'
+env['APP_SOURCES'] = ['SimpleParticlesApp.cpp']
+env['DEBUG'] = 1
+
+# libcinder root directory
+CINDER_PATH = '~/projects/cinder_apprewrite/'
+
+import os.path
+CINDER_PATH = os.path.expanduser(CINDER_PATH)
+
+# common visualizer files
+env = SConscript('../../TFVisualizer/scons/SConscript', exports = 'env')
+# add Cinder-Osc
+env = SConscript(CINDER_PATH + 'blocks/Cinder-Osc/scons/SConscript', exports = 'env')
+
+SConscript(CINDER_PATH + 'scons/SConscript', exports = 'env')
+
