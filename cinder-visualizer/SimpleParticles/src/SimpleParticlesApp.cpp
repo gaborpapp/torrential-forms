@@ -44,7 +44,7 @@ class SimpleParticlesApp : public AppBasic, Visualizer
 		void update();
 		void draw();
 
-		class ExcFailedServerPort : public Exception {};
+		class ExcMissingServerPort : public Exception {};
 
 		void chunkReceived( ChunkRef cr );
 		void segmentReceived( SegmentRef sr );
@@ -65,18 +65,20 @@ void SimpleParticlesApp::setup()
 	// get server port
 	const vector< string > &args = getArgs();
 	int port = 0;
-	for ( auto argIt = args.begin(); argIt != args.end(); ++argIt )
+	auto argIt = args.begin();
+	while ( argIt != args.end() )
 	{
 		if ( *argIt == "-port" )
 		{
-			auto portIt = ++argIt;
-			if ( portIt != args.end() )
-				port = fromString< int >( *portIt );
+			++argIt;
+			if ( argIt != args.end() )
+				port = fromString< int >( *argIt );
 		}
+		++argIt;
 	}
 
 	if ( port == 0 )
-		throw ExcFailedServerPort();
+		throw ExcMissingServerPort();
 
 	Visualizer::setup( "127.0.0.1", port );
 

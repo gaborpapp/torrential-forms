@@ -120,6 +120,7 @@ class Visualizer
 		bool handleResetMessage( const mndl::osc::Message &message );
 		bool handleShutdownMessage( const mndl::osc::Message &message );
 
+		virtual void torrentReceived( TorrentRef tr ) {};
 		virtual void chunkReceived( ChunkRef cr ) {};
 		virtual void segmentReceived( SegmentRef sr ) {};
 

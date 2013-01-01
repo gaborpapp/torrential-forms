@@ -43,6 +43,7 @@ bool Visualizer::handleTorrentMessage( const mndl::osc::Message &message )
 
 	mTorrentRef = TorrentRef( new Torrent( numberOfFiles, downloadDuration, totalSize ) );
 	mFiles.resize( mTorrentRef->mNumberOfFiles );
+	torrentReceived( mTorrentRef );
 
 	return false;
 }
