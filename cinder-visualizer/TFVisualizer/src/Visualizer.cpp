@@ -1,6 +1,7 @@
 #include <string>
 
 #include "cinder/app/App.h"
+#include "cinder/Utilities.h"
 
 #include "Visualizer.h"
 
@@ -9,13 +10,12 @@ using namespace std;
 
 namespace tf {
 
-void Visualizer::setup( string serverIp, int serverPort )
+void Visualizer::setup( std::string serverIp, int serverPort )
 {
 	reset();
 
 	mListener = mndl::osc::Server( LISTENER_PORT, mndl::osc::PROTO_TCP );
 
-	//mListener.registerOscReceived< Visualizer >( &Visualizer::oscReceived, this );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleTorrentMessage, this, "/torrent", "ifi" );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleFileMessage, this, "/file", "iii" );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleChunkMessage, this, "/chunk", "iiiiif" );
@@ -28,22 +28,15 @@ void Visualizer::setup( string serverIp, int serverPort )
 	registerVisualizer( LISTENER_PORT );
 }
 
-void Visualizer::reset()
-{
-	mTorrentRef.reset();
-	mFiles.clear();
-	mPeers.clear();
-}
-
 bool Visualizer::handleTorrentMessage( const mndl::osc::Message &message )
 {
-	int numberOfFiles = message.getArg< int32_t >( 0 );
+	int numFiles = message.getArg< int32_t >( 0 );
 	float downloadDuration = message.getArg< float >( 1 );
 	int totalSize = message.getArg< int32_t >( 2 );
 
-	mTorrentRef = TorrentRef( new Torrent( numberOfFiles, downloadDuration, totalSize ) );
-	mFiles.resize( mTorrentRef->mNumberOfFiles );
-	torrentReceived( mTorrentRef );
+	mTorrentRef = mTorrentFactoryRef->createTorrent( numFiles, downloadDuration, totalSize );
+	mTorrentRef->mFiles.resize( mTorrentRef->getNumFiles() );
+	mTorrentReceivedSig( mTorrentRef );
 
 	return false;
 }
@@ -54,8 +47,8 @@ bool Visualizer::handleFileMessage( const mndl::osc::Message &message )
 	int offset = message.getArg< int32_t >( 1 );
 	int length = message.getArg< int32_t >( 2 );
 
-	if ( fileNum < mTorrentRef->mNumberOfFiles )
-		mFiles[ fileNum ] = FileRef( new File( fileNum, offset, length ) );
+	if ( fileNum < mTorrentRef->getNumFiles() )
+		mTorrentRef->mFiles[ fileNum ] = mFileFactoryRef->createFile( fileNum, offset, length );
 	else
 		throw ExcUndeclaredFile();
 
@@ -71,18 +64,18 @@ bool Visualizer::handleChunkMessage( const mndl::osc::Message &message )
 	int peerId = message.getArg< int32_t >( 4 );
 	float t = message.getArg< float >( 5 );
 
-	if ( ( fileNum >= mTorrentRef->mNumberOfFiles ) ||
-		 !mFiles[ fileNum ] )
+	if ( ( fileNum >= mTorrentRef->getNumFiles() ) ||
+			!mTorrentRef->mFiles[ fileNum ] )
 	{
 		throw ExcChunkFromUndeclaredFile();
 	}
 	else
 	{
-		FileRef f = mFiles[ fileNum ];
-		int begin = torrentPosition - f->mOffset;
+		FileRef f = mTorrentRef->mFiles[ fileNum ];
+		int begin = torrentPosition - f->getOffset();
 		int end = begin + byteSize;
 		ChunkRef cr( new Chunk( chunkId, begin, end, f, peerId, t ) );
-		chunkReceived( cr );
+		mChunkReceivedSig( cr );
 	}
 
 	return false;
@@ -98,18 +91,18 @@ bool Visualizer::handleSegmentMessage( const mndl::osc::Message &message )
 	float t = message.getArg< float >( 5 );
 	float duration = message.getArg< float >( 6 );
 
-	if ( ( fileNum >= mTorrentRef->mNumberOfFiles ) ||
-		 !mFiles[ fileNum ] )
+	if ( ( fileNum >= mTorrentRef->getNumFiles() ) ||
+			!mTorrentRef->mFiles[ fileNum ] )
 	{
 		throw ExcSegmentFromUndeclaredFile();
 	}
 	else
 	{
-		FileRef f = mFiles[ fileNum ];
-		int begin = torrentPosition - f->mOffset;
+		FileRef f = mTorrentRef->mFiles[ fileNum ];
+		int begin = torrentPosition - f->getOffset();
 		int end = begin + byteSize;
 		SegmentRef sr( new Segment( segmentId, begin, end, f, peerId, t, duration ) );
-		segmentReceived( sr );
+		mSegmentReceivedSig( sr );
 	}
 	return false;
 }
@@ -117,9 +110,9 @@ bool Visualizer::handleSegmentMessage( const mndl::osc::Message &message )
 bool Visualizer::handlePeerMessage( const mndl::osc::Message &message )
 {
 	int id = message.getArg< int32_t >( 0 );
-	string address = message.getArg< string >( 1 );
+	std::string address = message.getArg< std::string >( 1 );
 	float bearing = message.getArg< float >( 2 );
-	string location = message.getArg< string >( 3 );
+	std::string location = message.getArg< std::string >( 3 );
 
 	mPeers[ id ] = PeerRef( new Peer( id, address, bearing, location ) );
 	return false;
@@ -133,37 +126,14 @@ bool Visualizer::handleResetMessage( const mndl::osc::Message &message )
 
 bool Visualizer::handleShutdownMessage( const mndl::osc::Message &message )
 {
-	app::App::get()->quit();
+	ci::app::App::get()->quit();
 	return false;
 }
 
-bool Visualizer::oscReceived( const mndl::osc::Message &message )
+void Visualizer::reset()
 {
-	app::console() << app::getElapsedSeconds() << " message received " << message.getAddressPattern() << endl;
-	for ( size_t i = 0; i < message.getNumArgs(); i++ )
-	{
-		app::console() <<  " argument: " << i;
-		app::console() <<  " type: " << message.getArgType( i ) << " value: ";
-		switch ( message.getArgType( i ) )
-		{
-			case 'i':
-				app::console() << message.getArg< int32_t >( i );
-				break;
-
-			case 'f':
-				app::console() << message.getArg< float >( i );
-				break;
-
-			case 's':
-				app::console() << message.getArg< string >( i );
-				break;
-
-			default:
-				break;
-		}
-		app::console() << endl;
-	}
-	return true;
+	mTorrentRef.reset();
+	mPeers.clear();
 }
 
 void Visualizer::registerVisualizer( int port )
@@ -171,6 +141,32 @@ void Visualizer::registerVisualizer( int port )
 	mndl::osc::Message msg( "/register" );
 	msg.addArg( LISTENER_PORT );
 	mSender.send( msg );
+}
+
+size_t Visualizer::getNumPeers() const
+{
+	return mPeers.size();
+}
+
+int Visualizer::getServerPort( const vector< string > &args )
+{
+	int port = 0;
+	auto argIt = args.begin();
+	while ( argIt != args.end() )
+	{
+		if ( *argIt == "-port" )
+		{
+			++argIt;
+			if ( argIt != args.end() )
+				port = fromString< int >( *argIt );
+		}
+		++argIt;
+	}
+
+	if ( port == 0 )
+		throw ExcMissingServerPort();
+
+	return port;
 }
 
 } // namespace tf
