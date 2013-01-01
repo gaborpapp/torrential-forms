@@ -1,7 +1,7 @@
 env = Environment()
 
 env['APP_TARGET'] = 'SimplePuzzle'
-env['APP_SOURCES'] = ['SimplePuzzleApp.cpp']
+env['APP_SOURCES'] = ['SimplePuzzleApp.cpp', 'TorrentPuzzle.cpp']
 env['DEBUG'] = 1
 
 # libcinder root directory

@@ -15,19 +15,13 @@
  along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstring>
-#include <string>
-#include <vector>
-
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/gl.h"
 #include "cinder/gl/Texture.h"
 
 #include "cinder/Cinder.h"
-#include "cinder/CinderMath.h"
-#include "cinder/Function.h"
-#include "cinder/Surface.h"
 
+#include "TorrentPuzzle.h"
 #include "Visualizer.h"
 
 using namespace ci;
@@ -36,37 +30,9 @@ using namespace std;
 
 namespace tf {
 
-class TorrentPuzzle : public tf::Torrent
-{
-	public:
-		TorrentPuzzle( int numberOfFiles, float downloadDuration, int totalSize );
-
-		void draw( const ci::Rectf &rect );
-		void addChunk( ChunkRef cr );
-
-	private:
-		void init();
-
-		int mTextureWidth;
-		ci::gl::Texture mTexture;
-		ci::Surface8u mSurface;
-
-		bool mTextureNeedsUpdate;
-};
-
-class TorrentPuzzleFactory : public TorrentFactory
-{
-	public:
-		std::shared_ptr< Torrent > createTorrent( int numberOfFiles, float downloadDuration, int totalSize )
-		{
-			return std::shared_ptr< Torrent >( new TorrentPuzzle( numberOfFiles, downloadDuration, totalSize ) );
-		}
-};
-
 class SimplePuzzleApp : public AppBasic, Visualizer
 {
 	public:
-		void prepareSettings( Settings *settings );
 		void setup();
 
 		void keyDown( KeyEvent event );
@@ -80,68 +46,6 @@ class SimplePuzzleApp : public AppBasic, Visualizer
 
 	private:
 };
-
-TorrentPuzzle::TorrentPuzzle( int numberOfFiles, float downloadDuration, int totalSize ) :
-	Torrent( numberOfFiles, downloadDuration, totalSize ),
-	mTextureWidth( 2048 )
-{
-	// create texture on primary thread
-	app::App::get()->dispatchSync( bind( &TorrentPuzzle::init, this ) );
-}
-
-void TorrentPuzzle::init()
-{
-	mSurface = Surface8u( mTextureWidth, 1, false );
-	memset( mSurface.getData(), 100, mSurface.getHeight() * mSurface.getRowBytes() );
-
-	mTexture = gl::Texture( mSurface );
-	mTextureNeedsUpdate = false;
-}
-
-void TorrentPuzzle::addChunk( ChunkRef cr )
-{
-	int fileOffset  = cr->mFileRef->getOffset();
-	int torrentBegin = cr->mBegin + fileOffset;
-	int torrentEnd = cr->mEnd + fileOffset;
-	int x0 = (double)mTextureWidth * (double)torrentBegin / mTotalSize;
-	int x1 = (double)mTextureWidth * (double)torrentEnd / mTotalSize;
-	if ( math< int >::abs( x1 - x0 ) < 1 )
-		x1 = x0 + 1;
-
-	//Color8u color( CM_HSV, cr->mPeerId / (float)getNumPeers(), .7f, .7f );
-	Color8u color = Color::white();
-	Area area( x0, 0, x1, 1 );
-	Surface::Iter iter = mSurface.getIter( area );
-	while ( iter.line() )
-	{
-		while ( iter.pixel() )
-		{
-			iter.r() = color.r;
-			iter.g() = color.g;
-			iter.b() = color.b;
-		}
-	}
-	mTextureNeedsUpdate = true;
-}
-
-void TorrentPuzzle::draw( const Rectf &rect )
-{
-	if ( mTextureNeedsUpdate )
-	{
-		mTexture.update( mSurface );
-		mTextureNeedsUpdate = false;
-	}
-	mTexture.enableAndBind();
-	gl::color( Color::white() );
-	gl::drawSolidRect( rect );
-	mTexture.unbind();
-	mTexture.disable();
-}
-
-void SimplePuzzleApp::prepareSettings( Settings *settings )
-{
-	settings->setWindowSize( 640, 480 );
-}
 
 void SimplePuzzleApp::setup()
 {

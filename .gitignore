@@ -10,3 +10,5 @@ sessions
 export
 press
 visual-experiments/capture.*
+.sconsign.dblite
+*.o

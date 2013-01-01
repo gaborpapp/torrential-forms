@@ -36,6 +36,8 @@ bool Visualizer::handleTorrentMessage( const mndl::osc::Message &message )
 
 	mTorrentRef = mTorrentFactoryRef->createTorrent( numFiles, downloadDuration, totalSize );
 	mTorrentRef->mFiles.resize( mTorrentRef->getNumFiles() );
+	// TODO: peers are sent before the torrent
+	mTorrentRef->mPeers = mPeers;
 	mTorrentReceivedSig( mTorrentRef );
 
 	return false;
@@ -48,7 +50,7 @@ bool Visualizer::handleFileMessage( const mndl::osc::Message &message )
 	int length = message.getArg< int32_t >( 2 );
 
 	if ( fileNum < mTorrentRef->getNumFiles() )
-		mTorrentRef->mFiles[ fileNum ] = mFileFactoryRef->createFile( fileNum, offset, length );
+		mTorrentRef->mFiles[ fileNum ] = mFileFactoryRef->createFile( fileNum, offset, length, mTorrentRef );
 	else
 		throw ExcUndeclaredFile();
 

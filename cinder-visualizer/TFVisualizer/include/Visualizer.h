@@ -23,19 +23,23 @@ typedef std::shared_ptr< Peer > PeerRef;
 class Torrent
 {
 	public:
-		Torrent( int numFiles, float downloadDuration, int totalSize ) :
+		Torrent( size_t numFiles, float downloadDuration, size_t totalSize ) :
 			mNumFiles( numFiles ), mDownloadDuration( downloadDuration ),
 			mTotalSize( totalSize )
 		{}
 
-		virtual ~Torrent()
-		{
-			mFiles.clear();
-		}
+		virtual ~Torrent() { mFiles.clear(); }
 
-		int getNumFiles() const { return mNumFiles; }
+		size_t getNumFiles() const { return mNumFiles; }
+		std::vector< FileRef > & getFiles() { return mFiles; }
+		const std::vector< FileRef > & getFiles() const { return mFiles; }
+
 		float getDownloadDuration() const { return mDownloadDuration; }
-		int getTotalSize() const { return mTotalSize; }
+		size_t getTotalSize() const { return mTotalSize; }
+
+		size_t getNumPeers() const { return mPeers.size(); }
+		std::map< int, PeerRef > & getPeers() { return mPeers; }
+		const std::map< int, PeerRef > & getPeers() const { return mPeers; }
 
 		friend std::ostream& operator<<( std::ostream &lhs, const Torrent &rhs )
 		{
@@ -48,11 +52,12 @@ class Torrent
 		friend class Visualizer;
 
 	protected:
-		int mNumFiles;
+		size_t mNumFiles;
 		float mDownloadDuration;
-		int mTotalSize;
+		size_t mTotalSize;
 
 		std::vector< FileRef > mFiles;
+		std::map< int, PeerRef > mPeers;
 };
 
 typedef std::shared_ptr< Torrent > TorrentRef;
@@ -60,14 +65,14 @@ typedef std::shared_ptr< Torrent > TorrentRef;
 class TorrentFactory
 {
 	public:
-		virtual TorrentRef createTorrent( int numberOfFiles, float downloadDuration, int totalSize ) = 0;
+		virtual TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize ) = 0;
 		virtual ~TorrentFactory() {}
 };
 
 class DefaultTorrentFactory : public TorrentFactory
 {
 	public:
-		TorrentRef createTorrent( int numberOfFiles, float downloadDuration, int totalSize )
+		TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize )
 		{
 			return TorrentRef( new Torrent( numberOfFiles, downloadDuration, totalSize ) );
 		}
@@ -76,33 +81,36 @@ class DefaultTorrentFactory : public TorrentFactory
 class File
 {
 	public:
-		File( int fileNum, int offset, int length ) :
-			mFileNum( fileNum ), mOffset( offset ), mLength( length )
+		File( int fileNum, int offset, int length, TorrentRef tr ) :
+			mFileNum( fileNum ), mOffset( offset ), mLength( length ),
+			mTorrentRef( tr )
 		{}
 
 		int getFileNum() const { return mFileNum; }
 		int getOffset() const { return mOffset; }
 		int getLength() const { return mLength; }
+		TorrentRef getTorrentRef() const { return mTorrentRef; }
 
 	protected:
 		int mFileNum;
 		int mOffset;
 		int mLength;
+		TorrentRef mTorrentRef;
 };
 
 class FileFactory
 {
 	public:
-		virtual FileRef createFile( int fileNum, int offset, int length ) = 0;
+		virtual FileRef createFile( int fileNum, int offset, int length, TorrentRef tr ) = 0;
 		virtual ~FileFactory() {}
 };
 
 class DefaultFileFactory : public FileFactory
 {
 	public:
-		FileRef createFile( int fileNum, int offset, int length )
+		FileRef createFile( int fileNum, int offset, int length, TorrentRef tr )
 		{
-			return FileRef( new File( fileNum, offset, length ) );
+			return FileRef( new File( fileNum, offset, length, tr ) );
 		}
 };
 
