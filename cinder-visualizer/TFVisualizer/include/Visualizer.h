@@ -49,8 +49,6 @@ class Torrent
 			return lhs;
 		}
 
-		friend class Visualizer;
-
 	protected:
 		size_t mNumFiles;
 		float mDownloadDuration;
@@ -58,6 +56,8 @@ class Torrent
 
 		std::vector< FileRef > mFiles;
 		std::map< int, PeerRef > mPeers;
+
+		friend class Visualizer;
 };
 
 typedef std::shared_ptr< Torrent > TorrentRef;
@@ -191,22 +191,20 @@ class Visualizer
 		template< typename T >
 		boost::signals2::connection connectTorrentReceived( void( T::*fn )( TorrentRef ), T *obj )
 		{
-			return mTorrentReceivedSig.connect( std::function< TorrentCallback >( boost::bind( fn, obj, ::_1 ) ) );
+			return mTorrentReceivedSig.connect( std::function< TorrentCallback >( std::bind( fn, obj, std::_1 ) ) );
 		}
 		template< typename T >
 		boost::signals2::connection connectChunkReceived( void( T::*fn )( ChunkRef ), T *obj )
 		{
-			return mChunkReceivedSig.connect( std::function< ChunkCallback >( boost::bind( fn, obj, ::_1 ) ) );
+			return mChunkReceivedSig.connect( std::function< ChunkCallback >( std::bind( fn, obj, std::_1 ) ) );
 		}
 		template< typename T >
 		boost::signals2::connection connectSegmentReceived( void( T::*fn )( SegmentRef ), T *obj )
 		{
-			return mSegmentReceivedSig.connect( std::function< SegmentCallback >( boost::bind( fn, obj, ::_1 ) ) );
+			return mSegmentReceivedSig.connect( std::function< SegmentCallback >( std::bind( fn, obj, std::_1 ) ) );
 		}
 
 		void reset();
-
-		size_t getNumPeers() const;
 
 		int getServerPort( const std::vector< std::string > &args );
 

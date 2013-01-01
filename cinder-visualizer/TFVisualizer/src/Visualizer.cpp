@@ -145,11 +145,6 @@ void Visualizer::registerVisualizer( int port )
 	mSender.send( msg );
 }
 
-size_t Visualizer::getNumPeers() const
-{
-	return mPeers.size();
-}
-
 int Visualizer::getServerPort( const vector< string > &args )
 {
 	int port = 0;

@@ -13,7 +13,7 @@ TorrentPuzzle::TorrentPuzzle( size_t numberOfFiles, float downloadDuration, size
 	mTextureWidth( 2048 )
 {
 	// create texture on primary thread
-	app::App::get()->dispatchSync( std::bind( &TorrentPuzzle::init, this ) );
+	app::App::get()->dispatchSync( [&] { init(); } );
 }
 
 void TorrentPuzzle::init()
