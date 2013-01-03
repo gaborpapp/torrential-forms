@@ -218,7 +218,6 @@ class Visualizer
 		static const int LISTENER_PORT = 12110;
 
 		TorrentRef mTorrentRef;
-		std::map< int, PeerRef > mPeers;
 
 		bool handleTorrentMessage( const mndl::osc::Message &message );
 		bool handleFileMessage( const mndl::osc::Message &message );

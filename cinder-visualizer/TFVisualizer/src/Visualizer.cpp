@@ -36,8 +36,6 @@ bool Visualizer::handleTorrentMessage( const mndl::osc::Message &message )
 
 	mTorrentRef = mTorrentFactoryRef->createTorrent( numFiles, downloadDuration, totalSize );
 	mTorrentRef->mFiles.resize( mTorrentRef->getNumFiles() );
-	// TODO: peers are sent before the torrent
-	mTorrentRef->mPeers = mPeers;
 	mTorrentReceivedSig( mTorrentRef );
 
 	return false;
@@ -116,7 +114,7 @@ bool Visualizer::handlePeerMessage( const mndl::osc::Message &message )
 	float bearing = message.getArg< float >( 2 );
 	std::string location = message.getArg< std::string >( 3 );
 
-	mPeers[ id ] = PeerRef( new Peer( id, address, bearing, location ) );
+	mTorrentRef->mPeers[ id ] = PeerRef( new Peer( id, address, bearing, location ) );
 	return false;
 }
 
@@ -135,7 +133,6 @@ bool Visualizer::handleShutdownMessage( const mndl::osc::Message &message )
 void Visualizer::reset()
 {
 	mTorrentRef.reset();
-	mPeers.clear();
 }
 
 void Visualizer::registerVisualizer( int port )
