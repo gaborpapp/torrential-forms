@@ -41,6 +41,14 @@ class Torrent
 		std::map< int, PeerRef > & getPeers() { return mPeers; }
 		const std::map< int, PeerRef > & getPeers() const { return mPeers; }
 
+	protected:
+		size_t mNumFiles;
+		float mDownloadDuration;
+		size_t mTotalSize;
+
+		std::vector< FileRef > mFiles;
+		std::map< int, PeerRef > mPeers;
+
 		friend std::ostream& operator<<( std::ostream &lhs, const Torrent &rhs )
 		{
 			lhs << "Torrent( files = " << rhs.mNumFiles <<
@@ -49,13 +57,6 @@ class Torrent
 			return lhs;
 		}
 
-	protected:
-		size_t mNumFiles;
-		float mDownloadDuration;
-		size_t mTotalSize;
-
-		std::vector< FileRef > mFiles;
-		std::map< int, PeerRef > mPeers;
 
 		friend class Visualizer;
 };
@@ -81,7 +82,7 @@ class DefaultTorrentFactory : public TorrentFactory
 class File
 {
 	public:
-		File( int fileNum, int offset, int length, TorrentRef tr ) :
+		File( uint32_t fileNum, off_t offset, size_t length, TorrentRef tr ) :
 			mFileNum( fileNum ), mOffset( offset ), mLength( length ),
 			mTorrentRef( tr )
 		{}
@@ -92,84 +93,165 @@ class File
 		TorrentRef getTorrentRef() const { return mTorrentRef; }
 
 	protected:
-		int mFileNum;
-		int mOffset;
-		int mLength;
+		uint32_t mFileNum;
+		off_t mOffset;
+		size_t mLength;
 		TorrentRef mTorrentRef;
 };
 
 class FileFactory
 {
 	public:
-		virtual FileRef createFile( int fileNum, int offset, int length, TorrentRef tr ) = 0;
+		virtual FileRef createFile( uint32_t fileNum, off_t offset, size_t length, TorrentRef tr ) = 0;
 		virtual ~FileFactory() {}
 };
 
 class DefaultFileFactory : public FileFactory
 {
 	public:
-		FileRef createFile( int fileNum, int offset, int length, TorrentRef tr )
+		FileRef createFile( uint32_t fileNum, off_t offset, size_t length, TorrentRef tr )
 		{
 			return FileRef( new File( fileNum, offset, length, tr ) );
 		}
 };
 
-struct Peer
+class Peer
 {
-	Peer( int id, std::string address, float bearing, std::string location ) :
-		mId( id ), mAddress( address ), mBearing( bearing ), mLocation( location )
-	{}
+	public:
+		Peer( int id, std::string address, float bearing, std::string location, TorrentRef tr ) :
+			mId( id ), mAddress( address ), mBearing( bearing ), mLocation( location ),
+			mTorrentRef( tr )
+		{}
 
-	int mId;
-	std::string mAddress;
-	float mBearing;
-	std::string mLocation;
+		int getId() const { return mId; }
+		const std::string & getAddress() const { return mAddress; }
+		float getBearing() const { return mBearing; }
+		const std::string & getLocation() const { return mLocation; }
+
+	protected:
+		int mId;
+		std::string mAddress;
+		float mBearing;
+		std::string mLocation;
+		TorrentRef mTorrentRef;
+};
+
+class PeerFactory
+{
+	public:
+		virtual PeerRef createPeer( int id, std::string address, float bearing,
+				std::string location, TorrentRef tr ) = 0;
+		virtual ~PeerFactory() {}
+};
+
+class DefaultPeerFactory : public PeerFactory
+{
+	public:
+		PeerRef createPeer( int id, std::string address, float bearing, std::string location,
+				TorrentRef tr )
+		{
+			return PeerRef( new Peer( id, address, bearing, location, tr ) );
+		}
 };
 
 class Chunk
 {
 	public:
-		Chunk( int chunkId, int begin, int end, FileRef fr, int peerId, float t ) :
+		Chunk( int chunkId, off_t begin, off_t end, FileRef fr, int peerId, float t ) :
 			mId( chunkId ), mBegin( begin ), mEnd( end ), mByteSize( end - begin ),
-			mFileNum( fr->getFileNum() ), mFileRef( fr ), mPeerId( peerId ), mTime( t )
+			mFileNum( fr->getFileNum() ), mFileRef( fr ), mPeerId( peerId ),
+			mPeerRef( fr->getTorrentRef()->getPeers()[ peerId ] ), mTime( t )
 		{}
 
-	int mId;
-	int mBegin; //< Position relative to the file.
-	int mEnd; //< End position relative to the file.
-	int mByteSize;
-	int mFileNum;
-	FileRef mFileRef;
-	int mPeerId;
-	float mTime; //< Chunk's arrival time, where 0 is the start of the transmission log.
+		int getId() const { return mId; }
+		off_t getBegin() const { return mBegin; }
+		off_t getEnd() const { return mEnd; }
+		size_t getByteSize() const { return mByteSize; }
+		uint32_t getFileNum() const { return mFileNum; }
+		FileRef getFileRef() const { return mFileRef; }
+		int getPeerId() const { return mPeerId; }
+		PeerRef getPeerRef() const { return mPeerRef; }
+		float getTime() const { return mTime; }
 
-	friend std::ostream& operator<<( std::ostream& lhs, const Chunk &rhs )
-	{
-		lhs << "Chunk( id = " << rhs.mId << ", begin = " << rhs.mBegin <<
-			", end = " << rhs.mEnd << ", fileNum = " << rhs.mFileNum << " )";
-		return lhs;
-	}
+	protected:
+		int mId;
+		off_t mBegin; //< Position relative to the file.
+		off_t mEnd; //< End position relative to the file.
+		size_t mByteSize;
+		uint32_t mFileNum;
+		FileRef mFileRef;
+		int mPeerId;
+		PeerRef mPeerRef;
+		float mTime; //< Chunk's arrival time, where 0 is the start of the transmission log.
+
+		friend std::ostream& operator<<( std::ostream& lhs, const Chunk &rhs )
+		{
+			lhs << "Chunk( id = " << rhs.mId << ", begin = " << rhs.mBegin <<
+				", end = " << rhs.mEnd << ", fileNum = " << rhs.mFileNum << " )";
+			return lhs;
+		}
 };
 
 typedef std::shared_ptr< Chunk > ChunkRef;
 
+class ChunkFactory
+{
+	public:
+		virtual ChunkRef createChunk( int chunkId, off_t begin, off_t end, FileRef fr, int peerId, float t ) = 0;
+		virtual ~ChunkFactory() {}
+};
+
+class DefaultChunkFactory : public ChunkFactory
+{
+	public:
+		ChunkRef createChunk( int chunkId, off_t begin, off_t end, FileRef fr, int peerId, float t )
+		{
+			return ChunkRef( new Chunk( chunkId, begin, end, fr, peerId, t ) );
+		}
+};
+
 class Segment : public Chunk
 {
 	public:
-		Segment( int segmentId, int begin, int end, FileRef fr, int peerId, float t, float duration ) :
+		Segment( int segmentId, off_t begin, off_t end, FileRef fr, int peerId, float t, float duration ) :
 			Chunk( segmentId, begin, end, fr, peerId, t ),
 			mDuration( duration)
 		{}
 
+		float getDuration() const { return mDuration; }
+
+	protected:
 		float mDuration; //< How long the content will be played back acoustically.
 };
 
 typedef std::shared_ptr< Segment > SegmentRef;
 
+class SegmentFactory
+{
+	public:
+		virtual SegmentRef createSegment( int segmentId, off_t begin, off_t end, FileRef fr,
+				int peerId, float t, float duration ) = 0;
+		virtual ~SegmentFactory() {}
+};
+
+class DefaultSegmentFactory : public SegmentFactory
+{
+	public:
+		SegmentRef createSegment( int segmentId, off_t begin, off_t end, FileRef fr,
+				int peerId, float t, float duration )
+		{
+			return SegmentRef( new Segment( segmentId, begin, end, fr, peerId, t, duration ) );
+		}
+};
+
 typedef void( TorrentCallback )( TorrentRef );
+typedef void( PeerCallback )( PeerRef );
+typedef void( FileCallback )( FileRef );
 typedef void( ChunkCallback )( ChunkRef );
 typedef void( SegmentCallback )( SegmentRef );
 typedef boost::signals2::signal< TorrentCallback > TorrentSignal;
+typedef boost::signals2::signal< PeerCallback > PeerSignal;
+typedef boost::signals2::signal< FileCallback > FileSignal;
 typedef boost::signals2::signal< ChunkCallback > ChunkSignal;
 typedef boost::signals2::signal< SegmentCallback > SegmentSignal;
 
@@ -178,7 +260,10 @@ class Visualizer
 	public:
 		Visualizer() :
 			mTorrentFactoryRef( new DefaultTorrentFactory() ),
-			mFileFactoryRef( new DefaultFileFactory() )
+			mPeerFactoryRef( new DefaultPeerFactory() ),
+			mFileFactoryRef( new DefaultFileFactory() ),
+			mChunkFactoryRef( new DefaultChunkFactory() ),
+			mSegmentFactoryRef( new DefaultSegmentFactory() )
 		{}
 
 		void setup( std::string serverIp, int serverPort );
@@ -188,10 +273,41 @@ class Visualizer
 			mTorrentFactoryRef = torrentFactoryRef;
 		}
 
+		void setPeerFactory( std::shared_ptr< PeerFactory > peerFactoryRef )
+		{
+			mPeerFactoryRef = peerFactoryRef;
+		}
+
+		void setFileFactory( std::shared_ptr< FileFactory > fileFactoryRef )
+		{
+			mFileFactoryRef = fileFactoryRef;
+		}
+
+		void setChunkFactory( std::shared_ptr< ChunkFactory > chunkFactoryRef )
+		{
+			mChunkFactoryRef = chunkFactoryRef;
+		}
+
+		void setSegmentFactory( std::shared_ptr< SegmentFactory > segmentFactoryRef )
+		{
+			mSegmentFactoryRef = segmentFactoryRef;
+		}
+
 		template< typename T >
 		boost::signals2::connection connectTorrentReceived( void( T::*fn )( TorrentRef ), T *obj )
 		{
 			return mTorrentReceivedSig.connect( std::function< TorrentCallback >( std::bind( fn, obj, std::_1 ) ) );
+		}
+
+		template< typename T >
+		boost::signals2::connection connectPeerReceived( void( T::*fn )( PeerRef ), T *obj )
+		{
+			return mPeerReceivedSig.connect( std::function< PeerCallback >( std::bind( fn, obj, std::_1 ) ) );
+		}
+		template< typename T >
+		boost::signals2::connection connectFileReceived( void( T::*fn )( FileRef ), T *obj )
+		{
+			return mFileReceivedSig.connect( std::function< FileCallback >( std::bind( fn, obj, std::_1 ) ) );
 		}
 		template< typename T >
 		boost::signals2::connection connectChunkReceived( void( T::*fn )( ChunkRef ), T *obj )
@@ -210,7 +326,10 @@ class Visualizer
 
 	protected:
 		std::shared_ptr< TorrentFactory > mTorrentFactoryRef;
+		std::shared_ptr< PeerFactory > mPeerFactoryRef;
 		std::shared_ptr< FileFactory > mFileFactoryRef;
+		std::shared_ptr< ChunkFactory > mChunkFactoryRef;
+		std::shared_ptr< SegmentFactory > mSegmentFactoryRef;
 
 		mndl::osc::Client mSender;
 		mndl::osc::Server mListener;
@@ -230,6 +349,8 @@ class Visualizer
 		void registerVisualizer( int port );
 
 		TorrentSignal mTorrentReceivedSig;
+		PeerSignal mPeerReceivedSig;
+		FileSignal mFileReceivedSig;
 		ChunkSignal mChunkReceivedSig;
 		SegmentSignal mSegmentReceivedSig;
 

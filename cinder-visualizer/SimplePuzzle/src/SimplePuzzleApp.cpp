@@ -23,10 +23,9 @@ class SimplePuzzleApp : public AppBasic, Visualizer
 		void update();
 		void draw();
 
+	private:
 		void torrentReceived( TorrentRef tr );
 		void chunkReceived( ChunkRef cr );
-
-	private:
 };
 
 void SimplePuzzleApp::setup()

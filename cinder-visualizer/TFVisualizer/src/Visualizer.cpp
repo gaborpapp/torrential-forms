@@ -48,9 +48,15 @@ bool Visualizer::handleFileMessage( const mndl::osc::Message &message )
 	int length = message.getArg< int32_t >( 2 );
 
 	if ( fileNum < mTorrentRef->getNumFiles() )
-		mTorrentRef->mFiles[ fileNum ] = mFileFactoryRef->createFile( fileNum, offset, length, mTorrentRef );
+	{
+		FileRef fr = mFileFactoryRef->createFile( fileNum, offset, length, mTorrentRef );
+		mTorrentRef->mFiles[ fileNum ] = fr;
+		mFileReceivedSig( fr );
+	}
 	else
+	{
 		throw ExcUndeclaredFile();
+	}
 
 	return false;
 }
@@ -74,7 +80,8 @@ bool Visualizer::handleChunkMessage( const mndl::osc::Message &message )
 		FileRef f = mTorrentRef->mFiles[ fileNum ];
 		int begin = torrentPosition - f->getOffset();
 		int end = begin + byteSize;
-		ChunkRef cr( new Chunk( chunkId, begin, end, f, peerId, t ) );
+		ChunkRef cr = mChunkFactoryRef->createChunk( chunkId, begin, end, f, peerId, t );
+		// TODO: add chunk to file?
 		mChunkReceivedSig( cr );
 	}
 
@@ -102,6 +109,7 @@ bool Visualizer::handleSegmentMessage( const mndl::osc::Message &message )
 		int begin = torrentPosition - f->getOffset();
 		int end = begin + byteSize;
 		SegmentRef sr( new Segment( segmentId, begin, end, f, peerId, t, duration ) );
+		// TODO: add segment to file?
 		mSegmentReceivedSig( sr );
 	}
 	return false;
@@ -114,7 +122,9 @@ bool Visualizer::handlePeerMessage( const mndl::osc::Message &message )
 	float bearing = message.getArg< float >( 2 );
 	std::string location = message.getArg< std::string >( 3 );
 
-	mTorrentRef->mPeers[ id ] = PeerRef( new Peer( id, address, bearing, location ) );
+	PeerRef pr = mPeerFactoryRef->createPeer( id, address, bearing, location, mTorrentRef );
+	mTorrentRef->mPeers[ id ] = pr;
+	mPeerReceivedSig( pr );
 	return false;
 }
 

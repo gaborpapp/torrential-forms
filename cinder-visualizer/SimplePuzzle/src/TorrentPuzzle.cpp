@@ -27,15 +27,15 @@ void TorrentPuzzle::init()
 
 void TorrentPuzzle::addChunk( ChunkRef cr )
 {
-	int fileOffset  = cr->mFileRef->getOffset();
-	int torrentBegin = cr->mBegin + fileOffset;
-	int torrentEnd = cr->mEnd + fileOffset;
+	int fileOffset  = cr->getFileRef()->getOffset();
+	int torrentBegin = cr->getBegin() + fileOffset;
+	int torrentEnd = cr->getEnd() + fileOffset;
 	int x0 = (double)mTextureWidth * (double)torrentBegin / mTotalSize;
 	int x1 = (double)mTextureWidth * (double)torrentEnd / mTotalSize;
 	if ( math< int >::abs( x1 - x0 ) < 1 )
 		x1 = x0 + 1;
 
-	Color8u color( CM_HSV, cr->mPeerId / (float)cr->mFileRef->getTorrentRef()->getNumPeers(), .7f, .7f );
+	Color8u color( CM_HSV, cr->getPeerId() / (float)cr->getFileRef()->getTorrentRef()->getNumPeers(), .7f, .7f );
 	Area area( x0, 0, x1, 1 );
 	Surface::Iter iter = mSurface.getIter( area );
 	while ( iter.line() )
