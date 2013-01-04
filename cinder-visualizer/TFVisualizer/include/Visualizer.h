@@ -59,7 +59,9 @@ class Torrent
 		{
 			lhs << "Torrent( files = " << rhs.mNumFiles <<
 				", download duration = " << rhs.mDownloadDuration <<
-				", size = " << rhs.mTotalSize << " )";
+				", size = " << rhs.mTotalSize <<
+				", chunks = " << rhs.mNumChunks <<
+				", segments = " << rhs.mNumSegments << " )";
 			return lhs;
 		}
 
