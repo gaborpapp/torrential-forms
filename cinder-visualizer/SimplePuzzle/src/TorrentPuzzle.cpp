@@ -8,8 +8,9 @@ using namespace ci;
 
 namespace tf {
 
-TorrentPuzzle::TorrentPuzzle( size_t numberOfFiles, float downloadDuration, size_t totalSize ) :
-	Torrent( numberOfFiles, downloadDuration, totalSize ),
+TorrentPuzzle::TorrentPuzzle( size_t numFiles, float downloadDuration, size_t totalSize,
+		size_t numChunks, size_t numSegments ) :
+	Torrent( numFiles, downloadDuration, totalSize, numChunks, numSegments ),
 	mTextureWidth( 2048 )
 {
 	// create texture on primary thread

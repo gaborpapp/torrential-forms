@@ -13,7 +13,8 @@ namespace tf {
 class TorrentPuzzle : public tf::Torrent
 {
 	public:
-		TorrentPuzzle( size_t numberOfFiles, float downloadDuration, size_t totalSize );
+		TorrentPuzzle( size_t numFiles, float downloadDuration, size_t totalSize,
+				size_t numChunks, size_t numSegments );
 
 		void draw( const ci::Rectf &rect );
 		void addChunk( ChunkRef cr );
@@ -31,9 +32,11 @@ class TorrentPuzzle : public tf::Torrent
 class TorrentPuzzleFactory : public TorrentFactory
 {
 	public:
-		TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize )
+		TorrentRef createTorrent( size_t numFiles, float downloadDuration, size_t totalSize,
+				size_t numChunks, size_t numSegments )
 		{
-			return TorrentRef( new TorrentPuzzle( numberOfFiles, downloadDuration, totalSize ) );
+			return TorrentRef( new TorrentPuzzle( numFiles, downloadDuration, totalSize,
+						numChunks, numSegments ) );
 		}
 };
 

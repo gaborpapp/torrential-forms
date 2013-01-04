@@ -23,14 +23,18 @@ typedef std::shared_ptr< Peer > PeerRef;
 class Torrent
 {
 	public:
-		Torrent( size_t numFiles, float downloadDuration, size_t totalSize ) :
+		Torrent( size_t numFiles, float downloadDuration, size_t totalSize,
+				size_t numChunks, size_t numSegments ) :
 			mNumFiles( numFiles ), mDownloadDuration( downloadDuration ),
-			mTotalSize( totalSize )
+			mTotalSize( totalSize ), mNumChunks( numChunks ), mNumSegments( numSegments )
 		{}
 
 		virtual ~Torrent() { mFiles.clear(); }
 
 		size_t getNumFiles() const { return mNumFiles; }
+		size_t getNumChunks() const { return mNumChunks; }
+		size_t getNumSegments() const { return mNumSegments; }
+
 		std::vector< FileRef > & getFiles() { return mFiles; }
 		const std::vector< FileRef > & getFiles() const { return mFiles; }
 
@@ -45,6 +49,8 @@ class Torrent
 		size_t mNumFiles;
 		float mDownloadDuration;
 		size_t mTotalSize;
+		size_t mNumChunks;
+		size_t mNumSegments;
 
 		std::vector< FileRef > mFiles;
 		std::map< int, PeerRef > mPeers;
@@ -66,16 +72,19 @@ typedef std::shared_ptr< Torrent > TorrentRef;
 class TorrentFactory
 {
 	public:
-		virtual TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize ) = 0;
+		virtual TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize,
+				size_t numChunks, size_t numSegments ) = 0;
 		virtual ~TorrentFactory() {}
 };
 
 class DefaultTorrentFactory : public TorrentFactory
 {
 	public:
-		TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize )
+		TorrentRef createTorrent( size_t numberOfFiles, float downloadDuration, size_t totalSize,
+				size_t numChunks, size_t numSegments )
 		{
-			return TorrentRef( new Torrent( numberOfFiles, downloadDuration, totalSize ) );
+			return TorrentRef( new Torrent( numberOfFiles, downloadDuration, totalSize,
+						numChunks, numSegments ) );
 		}
 };
 

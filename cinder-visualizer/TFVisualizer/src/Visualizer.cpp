@@ -16,7 +16,7 @@ void Visualizer::setup( std::string serverIp, int serverPort )
 
 	mListener = mndl::osc::Server( mndl::osc::PORT_ANY, mndl::osc::PROTO_TCP );
 
-	mListener.registerOscReceived< Visualizer >( &Visualizer::handleTorrentMessage, this, "/torrent", "ifi" );
+	mListener.registerOscReceived< Visualizer >( &Visualizer::handleTorrentMessage, this, "/torrent", "ifiii" );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleFileMessage, this, "/file", "iii" );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleChunkMessage, this, "/chunk", "iiiiif" );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleSegmentMessage, this, "/segment", "iiiiiff" );
@@ -33,8 +33,11 @@ bool Visualizer::handleTorrentMessage( const mndl::osc::Message &message )
 	int numFiles = message.getArg< int32_t >( 0 );
 	float downloadDuration = message.getArg< float >( 1 );
 	int totalSize = message.getArg< int32_t >( 2 );
+	int numChunks = message.getArg< int32_t >( 3 );
+	int numSegments = message.getArg< int32_t >( 4 );
 
-	mTorrentRef = mTorrentFactoryRef->createTorrent( numFiles, downloadDuration, totalSize );
+	mTorrentRef = mTorrentFactoryRef->createTorrent( numFiles, downloadDuration, totalSize,
+			numChunks, numSegments );
 	mTorrentRef->mFiles.resize( mTorrentRef->getNumFiles() );
 	mTorrentReceivedSig( mTorrentRef );
 
