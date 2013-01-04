@@ -334,8 +334,6 @@ class Visualizer
 		mndl::osc::Client mSender;
 		mndl::osc::Server mListener;
 
-		static const int LISTENER_PORT = 12110;
-
 		TorrentRef mTorrentRef;
 
 		bool handleTorrentMessage( const mndl::osc::Message &message );

@@ -14,7 +14,7 @@ void Visualizer::setup( std::string serverIp, int serverPort )
 {
 	reset();
 
-	mListener = mndl::osc::Server( LISTENER_PORT, mndl::osc::PROTO_TCP );
+	mListener = mndl::osc::Server( mndl::osc::PORT_ANY, mndl::osc::PROTO_TCP );
 
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleTorrentMessage, this, "/torrent", "ifi" );
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleFileMessage, this, "/file", "iii" );
@@ -25,7 +25,7 @@ void Visualizer::setup( std::string serverIp, int serverPort )
 	mListener.registerOscReceived< Visualizer >( &Visualizer::handleShutdownMessage, this, "/shutdown" );
 
 	mSender = mndl::osc::Client( serverIp, serverPort, mndl::osc::PROTO_TCP );
-	registerVisualizer( LISTENER_PORT );
+	registerVisualizer( mListener.getPort() );
 }
 
 bool Visualizer::handleTorrentMessage( const mndl::osc::Message &message )
@@ -148,7 +148,7 @@ void Visualizer::reset()
 void Visualizer::registerVisualizer( int port )
 {
 	mndl::osc::Message msg( "/register" );
-	msg.addArg( LISTENER_PORT );
+	msg.addArg( port );
 	mSender.send( msg );
 }
 

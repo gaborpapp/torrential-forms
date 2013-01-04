@@ -25,6 +25,7 @@
 #include "cinder/Exception.h"
 #include "cinder/Utilities.h"
 
+#include "TorrentPuzzle.h"
 #include "Visualizer.h"
 
 using namespace ci;
@@ -44,13 +45,12 @@ class SimpleParticlesApp : public AppBasic, Visualizer
 		void update();
 		void draw();
 
-		class ExcMissingServerPort : public Exception {};
-
-		void chunkReceived( ChunkRef cr );
-		void segmentReceived( SegmentRef sr );
-
 	private:
 		params::InterfaceGl mParams;
+
+		void torrentReceived( TorrentRef tr );
+		void chunkReceived( ChunkRef cr );
+		void segmentReceived( SegmentRef sr );
 };
 
 void SimpleParticlesApp::prepareSettings( Settings *settings )
@@ -62,32 +62,24 @@ void SimpleParticlesApp::setup()
 {
 	gl::disableVerticalSync();
 
-	// get server port
-	const vector< string > &args = getArgs();
-	int port = 0;
-	auto argIt = args.begin();
-	while ( argIt != args.end() )
-	{
-		if ( *argIt == "-port" )
-		{
-			++argIt;
-			if ( argIt != args.end() )
-				port = fromString< int >( *argIt );
-		}
-		++argIt;
-	}
-
-	if ( port == 0 )
-		throw ExcMissingServerPort();
-
+	int port = Visualizer::getServerPort( getArgs() );
+	Visualizer::setTorrentFactory( std::shared_ptr< TorrentFactory >( new TorrentPuzzleFactory() ) );
 	Visualizer::setup( "127.0.0.1", port );
+
+	connectTorrentReceived< SimpleParticlesApp >( &SimpleParticlesApp::torrentReceived, this );
+	//connectChunkReceived< SimpleParticlesApp >( &SimpleParticlesApp::chunkReceived, this );
 
 	mParams = params::InterfaceGl( "Parameters", Vec2i( 200, 300 ) );
 }
 
+void SimpleParticlesApp::torrentReceived( TorrentRef tr )
+{
+	console() << *tr << endl;
+}
+
 void SimpleParticlesApp::chunkReceived( ChunkRef cr )
 {
-	console() << "added " << *cr << endl;
+	//console() << "added " << *cr << endl;
 }
 
 void SimpleParticlesApp::segmentReceived( SegmentRef sr )
