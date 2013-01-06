@@ -22,6 +22,7 @@
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/gl.h"
 #include "cinder/Exception.h"
+#include "cinder/Rand.h"
 #include "cinder/Utilities.h"
 
 //#include "PeerCircle.h"
@@ -47,6 +48,7 @@ class SimpleParticlesApp : public AppBasic, Visualizer
 		void shutdown();
 
 		void keyDown( KeyEvent event );
+		void mouseDown( MouseEvent event );
 
 		void update();
 		void draw();
@@ -89,7 +91,7 @@ void SimpleParticlesApp::setup()
 	params::PInterfaceGl::load( "params.xml" );
 	mParams = params::PInterfaceGl( "Parameters", Vec2i( 300, 420 ) );
 	mParams.addPersistentSizeAndPosition();
-	mParams.addText( "Emitter" );
+	mParams.addText( "Emitters" );
 	mParams.addPersistentParam( "Radius min",
 			&GlobalSettings::get().mEmitterRadiusMin, 10.f,
 			"min=1 max=50 step=.5" );
@@ -105,9 +107,22 @@ void SimpleParticlesApp::setup()
 	mParams.addPersistentParam( "Repulsion",
 			&GlobalSettings::get().mEmitterRepulsion, 10.f,
 			"min=0 max=100 step=.5" );
-	mParams.addPersistentParam( "Repulsion radius",
+	mParams.addPersistentParam( "Repulsion radius multiplier",
 			&GlobalSettings::get().mEmitterRepulsionRadius, 1.5f,
 			"min=1 max=20 step=.1" );
+	mParams.addPersistentParam( "Attraction radius",
+			&GlobalSettings::get().mEmitterAttractionRadius, 50.f,
+			"min=0 max=200 step=.5" );
+	mParams.addPersistentParam( "Attraction magnitude",
+			&GlobalSettings::get().mEmitterAttractionMagnitude, 10.f,
+			"min=0 max=100 step=.5" );
+	mParams.addPersistentParam( "Attraction duration",
+			&GlobalSettings::get().mEmitterAttractionDuration, 2.f,
+			"min=0 max=50 step=.2" );
+
+	mParams.addSeparator();
+	mParams.addPersistentParam( "Peer labels",
+			&GlobalSettings::get().mDebugPeerIds, false );
 
 	mParams.addSeparator();
 	mParams.addParam( "Fps", &mFps, "", true );
@@ -140,6 +155,7 @@ void SimpleParticlesApp::peerReceived( PeerRef cr )
 
 void SimpleParticlesApp::chunkReceived( ChunkRef cr )
 {
+	// increase the radius of the peer emitter
 	EmitterRef e = mEmitterController.mEmitters[ cr->getPeerId() ];
 	float r = e->mRadius;
 	if ( r < GlobalSettings::get().mEmitterRadiusMax )
@@ -147,16 +163,32 @@ void SimpleParticlesApp::chunkReceived( ChunkRef cr )
 		e->setRadius( r + GlobalSettings::get().mEmitterRadiusStep );
 	}
 
-	//console() << "added " << *cr << endl;
-	/*
-	auto pr = std::static_pointer_cast< PeerCircle >( cr->getPeerRef() );
-	app::App::get()->dispatchSync( [&] { double r = pr->getRadius(); pr->setRadius( r + 0.001 ); } );
-	*/
+	// pull the emitter towards the chunk position in the torrent
+	uint32_t id = Rand::randInt( cr->getPeerId() );
+	auto tr = std::dynamic_pointer_cast< TorrentPuzzle >( mTorrentRef );
+	Vec3f loc = tr->getChunkTargetPos( cr );
+	app::App::get()->dispatchSync( [&] { 
+			mEmitterController.addForceIdAttractor(
+				GlobalSettings::get().mEmitterAttractionMagnitude,
+				GlobalSettings::get().mEmitterAttractionDuration,
+				loc, id ); } );
 }
 
 void SimpleParticlesApp::segmentReceived( SegmentRef sr )
 {
 	//console() << "added " << *sr << endl;
+}
+
+void SimpleParticlesApp::mouseDown( MouseEvent event )
+{
+	if ( !mTorrentRef )
+		return;
+	uint32_t id = Rand::randInt( mTorrentRef->getNumPeers() );
+	Vec3f loc( Vec2f( event.getPos() ), 0.f );
+	mEmitterController.addForceIdAttractor(
+		GlobalSettings::get().mEmitterAttractionMagnitude,
+		GlobalSettings::get().mEmitterAttractionDuration,
+		loc, id );
 }
 
 void SimpleParticlesApp::update()

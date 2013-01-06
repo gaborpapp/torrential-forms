@@ -18,6 +18,7 @@ class TorrentPuzzle : public tf::Torrent
 
 		void draw( const ci::Rectf &rect );
 		void addChunk( ChunkRef cr );
+		ci::Vec3f getChunkTargetPos( ChunkRef cr );
 
 	private:
 		void init();

@@ -7,7 +7,7 @@
 class Emitter
 {
 	public:
-		Emitter( ci::Vec3f aLoc, ci::Vec3f aVel );
+		Emitter( uint32_t id, ci::Vec3f loc, ci::Vec3f vel );
 
 		void move();
 		void update();
@@ -17,8 +17,9 @@ class Emitter
 
 		ci::Vec3f mLoc;
 		ci::Vec3f mVel;
-		ci::Vec3f mAcc;
+		ci::Vec3f mAcc = ci::Vec3f::zero();
 
+		uint32_t mId;
 		float mRadius;
 		float mRadiusOrig;
 		float mMass;

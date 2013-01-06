@@ -18,6 +18,11 @@ class GlobalSettings
 		float mEmitterRadiusDamping;
 		float mEmitterRepulsion;
 		float mEmitterRepulsionRadius;
+		float mEmitterAttractionRadius;
+		float mEmitterAttractionMagnitude;
+		float mEmitterAttractionDuration;
+
+		bool mDebugPeerIds;
 };
 
 } // namespace tf

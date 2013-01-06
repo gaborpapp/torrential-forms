@@ -26,9 +26,14 @@ void EmitterController::update( int counter )
 	for ( int i = 0; i < counter; i++ )
 	{
 		// update Forces
-		for ( auto &forceKV: mForces )
+		for ( auto fit = mForces.begin(); fit != mForces.end(); )
 		{
-			forceKV.second->apply( mEmitters );
+			fit->second->apply( mEmitters );
+			// erase dead forces
+			if ( fit->second->mMagnitude == .0f )
+				fit = mForces.erase( fit );
+			else
+				++fit;
 		}
 
 		// update Emitters
@@ -61,7 +66,7 @@ void EmitterController::renderEmitters()
 
 void EmitterController::addEmitter( ci::Vec3f loc, ci::Vec3f vel )
 {
-	mEmitters.push_back( shared_ptr< Emitter >( new Emitter( loc, vel ) ) );
+	mEmitters.push_back( shared_ptr< Emitter >( new Emitter( mEmitters.size(), loc, vel ) ) );
 }
 
 uint32_t EmitterController::addForceRepulsion( float mag )
@@ -70,9 +75,10 @@ uint32_t EmitterController::addForceRepulsion( float mag )
 	return mCurrentForceId++;
 }
 
-uint32_t EmitterController::addForceIdAttractor( float mag, const ci::Vec3f &loc, uint32_t id )
+uint32_t EmitterController::addForceIdAttractor( float mag, float dur, const ci::Vec3f &loc, uint32_t id )
 {
-	mForces[ mCurrentForceId ] = shared_ptr< ForceIdAttractor >( new ForceIdAttractor( mag, loc, id ) );
+	mForces[ mCurrentForceId ] =
+		shared_ptr< ForceIdAttractor >( new ForceIdAttractor( mag, dur, loc, id ) );
 	return mCurrentForceId++;
 }
 

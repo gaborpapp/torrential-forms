@@ -23,7 +23,7 @@ class EmitterController
 		void createConstraints( const ci::Vec2f &windowDim );
 
 		uint32_t addForceRepulsion( float mag );
-		uint32_t addForceIdAttractor( float mag, const ci::Vec3f &loc, uint32_t id );
+		uint32_t addForceIdAttractor( float mag, float dur, const ci::Vec3f &loc, uint32_t id );
 		void removeForce( uint32_t forceId );
 		ForceRef getForceRef( uint32_t forceId ) { return mForces[ forceId ]; }
 

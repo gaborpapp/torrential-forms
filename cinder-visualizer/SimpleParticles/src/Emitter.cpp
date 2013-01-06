@@ -1,17 +1,15 @@
 #include "cinder/gl/gl.h"
 #include "cinder/Rand.h"
+#include "cinder/Utilities.h"
 
 #include "Emitter.h"
 #include "GlobalSettings.h"
 
 using namespace ci;
 
-Emitter::Emitter( Vec3f aLoc, Vec3f aVel )
+Emitter::Emitter( uint32_t id, Vec3f loc, Vec3f vel ) :
+	mId( id ), mLoc( loc ), mVel( vel )
 {
-	mLoc = aLoc;
-	mVel = aVel;
-	mAcc = Vec3f::zero();
-
 	setRadius( tf::GlobalSettings::get().mEmitterRadiusMin );
 	mCharge = Rand::randFloat( 0.35f, 0.75f );
 }
@@ -36,4 +34,7 @@ void Emitter::render()
 {
 	gl::color( Color::white() );
 	gl::drawStrokedCircle( Vec2f( mLoc.xy() ), mRadius );
+
+	if ( tf::GlobalSettings::get().mDebugPeerIds )
+		gl::drawString( toString< uint32_t >( mId ), mLoc.xy() );
 }

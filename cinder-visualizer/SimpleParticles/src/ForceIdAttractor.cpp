@@ -1,4 +1,7 @@
+#include "cinder/app/App.h"
+
 #include "ForceIdAttractor.h"
+#include "GlobalSettings.h"
 
 using namespace ci;
 using std::vector;
@@ -9,7 +12,7 @@ void ForceIdAttractor::apply( std::vector< EmitterRef > &emitters )
 	Vec3f dir = mLoc - e->mLoc;
 	float distSqrd = dir.lengthSquared();
 
-	float radius = 50.f;
+	float radius = tf::GlobalSettings::get().mEmitterAttractionRadius;
 	float radiusSqrd = radius * radius;
 
 	if ( distSqrd > .1f )
@@ -24,18 +27,20 @@ void ForceIdAttractor::apply( std::vector< EmitterRef > &emitters )
 			if ( F > 50.0f )
 				F = 50.0f;
 			dir.normalize();
-			dir *= F * per * 100.f * mMagnitude;
+			dir *= F * per * 100.f * mMagnitude * mLifeSpan;
 			e->mAcc += -dir;
 		}
 		else // constant attraction if outside
 		{
 			float F = e->mCharge * e->mInvMass;
-			if ( F > 1.0f )
-				F = 1.0f;
+			if ( F > 50.0f )
+				F = 50.0f;
 			dir.normalize();
-			dir *= F * mMagnitude;
+			dir *= F * mMagnitude * mLifeSpan;
 			e->mAcc += dir;
 		}
 
+		if ( mLifeSpan == 0.f )
+			mMagnitude = 0.f;
 	}
 }

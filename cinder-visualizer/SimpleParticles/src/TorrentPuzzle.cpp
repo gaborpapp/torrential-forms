@@ -51,6 +51,15 @@ void TorrentPuzzle::addChunk( ChunkRef cr )
 	mTextureNeedsUpdate = true;
 }
 
+Vec3f TorrentPuzzle::getChunkTargetPos( ChunkRef cr )
+{
+	int fileOffset  = cr->getFileRef()->getOffset();
+	double torrentPos = .5 * ( cr->getBegin() + cr->getEnd() ) + fileOffset;
+	float x0 = (double)app::getWindowWidth() * (double)torrentPos / (double)mTotalSize;
+
+	return Vec3f( x0, app::getWindowHeight() * .5f, 0.f );
+}
+
 void TorrentPuzzle::draw( const Rectf &rect )
 {
 	if ( mTextureNeedsUpdate )
