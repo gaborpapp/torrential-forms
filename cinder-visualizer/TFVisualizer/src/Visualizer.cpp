@@ -126,7 +126,8 @@ bool Visualizer::handlePeerMessage( const mndl::osc::Message &message )
 	std::string location = message.getArg< std::string >( 3 );
 
 	PeerRef pr = mPeerFactoryRef->createPeer( id, address, bearing, location, mTorrentRef );
-	mTorrentRef->mPeers[ id ] = pr;
+	mTorrentRef->mPeers.push_back( pr );
+	mTorrentRef->mPeersById[ id ] = pr;
 	mPeerReceivedSig( pr );
 	return false;
 }

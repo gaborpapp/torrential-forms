@@ -62,6 +62,10 @@ class Waves(visualizer.Visualizer):
         self.playing_segments = collections.OrderedDict()
         self.gatherer = Gatherer()
 
+    def pan_segment(self, segment):
+        # let orchestra & synth spatialize
+        pass
+
     def InitGL(self):
         visualizer.Visualizer.InitGL(self)
         glClearColor(0.0, 0.0, 0.0, 0.0)
@@ -153,5 +157,12 @@ class Waves(visualizer.Visualizer):
 
     def handle_segment_waveform_value(self, segment, value):
         segment.waveform.appendleft(value)
+
+    def finished(self):
+        if len(self.gatherer.pieces()) == 1:
+            piece = self.gatherer.pieces()[0]
+            return piece.begin == 0 and piece.end == self.torrent_length
+        else:
+            return False
 
 visualizer.run(Waves)

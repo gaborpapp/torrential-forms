@@ -42,8 +42,11 @@ class Torrent
 		size_t getTotalSize() const { return mTotalSize; }
 
 		size_t getNumPeers() const { return mPeers.size(); }
-		std::map< int, PeerRef > & getPeers() { return mPeers; }
-		const std::map< int, PeerRef > & getPeers() const { return mPeers; }
+		std::vector< PeerRef > & getPeers() { return mPeers; }
+		const std::vector< PeerRef > & getPeers() const { return mPeers; }
+		// TODO
+		std::map< int, PeerRef > & getPeersById() { return mPeersById; }
+		PeerRef getPeer( int id ) { return mPeersById[ id ]; }
 
 	protected:
 		size_t mNumFiles;
@@ -53,7 +56,8 @@ class Torrent
 		size_t mNumSegments;
 
 		std::vector< FileRef > mFiles;
-		std::map< int, PeerRef > mPeers;
+		std::vector< PeerRef > mPeers;
+		std::map< int, PeerRef > mPeersById;
 
 		friend std::ostream& operator<<( std::ostream &lhs, const Torrent &rhs )
 		{

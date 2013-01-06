@@ -1,7 +1,9 @@
 env = Environment()
 
-env['APP_TARGET'] = 'SimpleParticlesApp'
-env['APP_SOURCES'] = ['SimpleParticlesApp.cpp', 'TorrentPuzzle.cpp']
+env['APP_TARGET'] = 'SimpleParticles'
+env['APP_SOURCES'] = ['SimpleParticlesApp.cpp', 'PeerCircle.cpp', 'TorrentPuzzle.cpp',
+		'Constraint.cpp', 'Emitter.cpp', 'EmitterController.cpp', 'ForceIdAttractor.cpp',
+		'ForceRepulsion.cpp']
 env['DEBUG'] = 1
 
 # libcinder root directory

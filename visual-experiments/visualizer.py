@@ -1,8 +1,12 @@
+import sys
+import OpenGL
+OpenGL.ERROR_LOGGING = "-check-opengl-errors" in sys.argv
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
-import sys, os
+
 import argparse
+import os
 import collections
 import logging
 import math
@@ -188,7 +192,7 @@ class Visualizer:
 
         self.logger = logging.getLogger("visualizer")
         self.reset()
-        self.first_frame = True
+        self._frame_count = 0
         self.exiting = False
         self.time_increment = 0
         self.stopwatch = Stopwatch()
@@ -334,7 +338,7 @@ class Visualizer:
 
     def pan_segment(self, segment):
         if not self._warned_about_missing_pan_segment:
-            print "WARNING: pan_segment undefined. All sounds will be centered."
+            print "WARNING: pan_segment undefined in visualizer. Orchestra and synth now control panning."
             self._warned_about_missing_pan_segment = True
 
     def handle_shutdown(self, path, args, types, src, data):
@@ -395,6 +399,7 @@ class Visualizer:
         self.width = window_width - 2*self.margin
         self.height = window_height - 2*self.margin
         self._aspect_ratio = float(window_width) / window_height
+        self.min_dimension = min(self.width, self.height)
         self._refresh_layers()
         if not self._3d_enabled:
             glMatrixMode(GL_PROJECTION)
@@ -408,7 +413,13 @@ class Visualizer:
 
     def DrawGLScene(self):
         if self.exiting:
-            sys.exit()
+            self.logger.debug("total number of rendered frames: %s" % self._frame_count)
+            self.logger.debug("total FPS: %s" % (float(self._frame_count) / self.stopwatch.get_elapsed_time()))
+            if self.args.profile:
+                import yappi
+                yappi.print_stats(sys.stdout, yappi.SORTTYPE_TTOT)
+            glutDestroyWindow(glutGetWindow())
+            return
 
         try:
             self._draw_gl_scene_error_handled()
@@ -428,11 +439,10 @@ class Visualizer:
             self.current_export_time = float(self.exporter.frame_count) / self.export_fps
 
         self.now = self.current_time()
-        if self.first_frame:
+        if self._frame_count == 0:
             self.stopwatch.start()
             if self.sync:
                 self._synth().sync_beep()
-            self.first_frame = False
         else:
             self.time_increment = self.now - self.previous_frame_time
             glTranslatef(self.margin, self.margin, 0)
@@ -450,13 +460,14 @@ class Visualizer:
 
         glutSwapBuffers()
         self.previous_frame_time = self.now
+        if (self.export or self.args.exit_when_finished) and self.finished():
+            self.exiting = True
         if self.export:
-            if self.export_finished():
-                self.exiting = True
-            else:
-                self.exporter.export_frame()
+            self.exporter.export_frame()
 
-    def export_finished(self):
+        self._frame_count += 1
+
+    def finished(self):
         return False
 
     def handle_incoming_messages(self):
@@ -685,6 +696,9 @@ class Visualizer:
         parser.add_argument("-border", action="store_true")
         parser.add_argument("-fullscreen", action="store_true")
         parser.add_argument("-standalone", action="store_true")
+        parser.add_argument("-profile", action="store_true")
+        parser.add_argument("-check-opengl-errors", action="store_true")
+        parser.add_argument("-exit-when-finished", action="store_true")
 
 def run(visualizer_class):
     print "Hit ESC key to quit."
@@ -692,5 +706,9 @@ def run(visualizer_class):
     parser = argparse.ArgumentParser()
     visualizer_class.add_parser_arguments(parser)
     args = parser.parse_args()
+
+    if args.profile:
+        import yappi
+        yappi.start()
 
     visualizer_class(args).run()

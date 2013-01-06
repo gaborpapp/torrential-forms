@@ -21,12 +21,16 @@
 #include "cinder/Cinder.h"
 #include "cinder/app/AppBasic.h"
 #include "cinder/gl/gl.h"
-#include "cinder/params/Params.h"
 #include "cinder/Exception.h"
 #include "cinder/Utilities.h"
 
+//#include "PeerCircle.h"
+#include "EmitterController.h"
+#include "GlobalSettings.h"
+#include "PParams.h"
 #include "TorrentPuzzle.h"
 #include "Visualizer.h"
+
 
 using namespace ci;
 using namespace ci::app;
@@ -39,6 +43,8 @@ class SimpleParticlesApp : public AppBasic, Visualizer
 	public:
 		void prepareSettings( Settings *settings );
 		void setup();
+		void resize();
+		void shutdown();
 
 		void keyDown( KeyEvent event );
 
@@ -46,16 +52,22 @@ class SimpleParticlesApp : public AppBasic, Visualizer
 		void draw();
 
 	private:
-		params::InterfaceGl mParams;
+		params::PInterfaceGl mParams;
+
+		float mFps;
 
 		void torrentReceived( TorrentRef tr );
+		void peerReceived( PeerRef cr );
 		void chunkReceived( ChunkRef cr );
 		void segmentReceived( SegmentRef sr );
+
+		EmitterController mEmitterController;
+		uint32_t mForceRepulsionId;
 };
 
 void SimpleParticlesApp::prepareSettings( Settings *settings )
 {
-	settings->setWindowSize( 640, 480 );
+	settings->setWindowSize( 1200, 800 );
 }
 
 void SimpleParticlesApp::setup()
@@ -64,12 +76,48 @@ void SimpleParticlesApp::setup()
 
 	int port = Visualizer::getServerPort( getArgs() );
 	Visualizer::setTorrentFactory( std::shared_ptr< TorrentFactory >( new TorrentPuzzleFactory() ) );
+	//Visualizer::setPeerFactory( std::shared_ptr< PeerFactory >( new PeerCircleFactory() ) );
 	Visualizer::setup( "127.0.0.1", port );
 
 	connectTorrentReceived< SimpleParticlesApp >( &SimpleParticlesApp::torrentReceived, this );
-	//connectChunkReceived< SimpleParticlesApp >( &SimpleParticlesApp::chunkReceived, this );
+	connectPeerReceived< SimpleParticlesApp >( &SimpleParticlesApp::peerReceived, this );
+	connectChunkReceived< SimpleParticlesApp >( &SimpleParticlesApp::chunkReceived, this );
 
-	mParams = params::InterfaceGl( "Parameters", Vec2i( 200, 300 ) );
+	mForceRepulsionId = mEmitterController.addForceRepulsion( 10.f );
+	mEmitterController.createConstraints( getWindowSize() );
+
+	params::PInterfaceGl::load( "params.xml" );
+	mParams = params::PInterfaceGl( "Parameters", Vec2i( 300, 420 ) );
+	mParams.addPersistentSizeAndPosition();
+	mParams.addText( "Emitter" );
+	mParams.addPersistentParam( "Radius min",
+			&GlobalSettings::get().mEmitterRadiusMin, 10.f,
+			"min=1 max=50 step=.5" );
+	mParams.addPersistentParam( "Radius max",
+			&GlobalSettings::get().mEmitterRadiusMax, 50.f,
+			"min=1 max=250 step=.5" );
+	mParams.addPersistentParam( "Radius increase / chunk",
+			&GlobalSettings::get().mEmitterRadiusStep, .1f,
+			"min=0 max=5. step=.01" );
+	mParams.addPersistentParam( "Radius damping",
+			&GlobalSettings::get().mEmitterRadiusDamping, .975f,
+			"min=.9 max=1. step=.001" );
+	mParams.addPersistentParam( "Repulsion",
+			&GlobalSettings::get().mEmitterRepulsion, 10.f,
+			"min=0 max=100 step=.5" );
+
+	mParams.addSeparator();
+	mParams.addParam( "Fps", &mFps, "", true );
+}
+
+void SimpleParticlesApp::resize()
+{
+	mEmitterController.createConstraints( getWindowSize() );
+}
+
+void SimpleParticlesApp::shutdown()
+{
+	params::PInterfaceGl::save();
 }
 
 void SimpleParticlesApp::torrentReceived( TorrentRef tr )
@@ -77,25 +125,81 @@ void SimpleParticlesApp::torrentReceived( TorrentRef tr )
 	console() << *tr << endl;
 }
 
-void SimpleParticlesApp::chunkReceived( ChunkRef cr )
+void SimpleParticlesApp::peerReceived( PeerRef cr )
 {
 	//console() << "added " << *cr << endl;
+	Vec2f bv = Vec2f( getWindowSize() ) * Vec2f( .1f, .0f );
+	bv.rotate( cr->getBearing() );
+	Vec2f pos = getWindowCenter() + bv;
+	app::App::get()->dispatchSync( [&] {
+			mEmitterController.addEmitter( Vec3f( Vec2f( pos ), 0.f ), Vec3f::zero() ); } );
+}
+
+void SimpleParticlesApp::chunkReceived( ChunkRef cr )
+{
+	EmitterRef e = mEmitterController.mEmitters[ cr->getPeerId() ];
+	float r = e->mRadius;
+	if ( r < GlobalSettings::get().mEmitterRadiusMax )
+	{
+		e->setRadius( r + GlobalSettings::get().mEmitterRadiusStep );
+	}
+
+	//console() << "added " << *cr << endl;
+	/*
+	auto pr = std::static_pointer_cast< PeerCircle >( cr->getPeerRef() );
+	app::App::get()->dispatchSync( [&] { double r = pr->getRadius(); pr->setRadius( r + 0.001 ); } );
+	*/
 }
 
 void SimpleParticlesApp::segmentReceived( SegmentRef sr )
 {
-	console() << "added " << *sr << endl;
+	//console() << "added " << *sr << endl;
 }
 
 void SimpleParticlesApp::update()
 {
+	mFps = getAverageFps();
+
+	mEmitterController.getForceRef( mForceRepulsionId )->mMagnitude = GlobalSettings::get().mEmitterRepulsion;
+	mEmitterController.update();
+
+	/*
+	if ( mTorrentRef )
+	{
+		for ( auto peer: mTorrentRef->getPeers() )
+		{
+			std::static_pointer_cast< PeerCircle >( peer )->update();
+		}
+	}
+	*/
 }
+
 
 void SimpleParticlesApp::draw()
 {
 	gl::clear( Color::black() );
 
-	params::InterfaceGl::draw();
+	gl::setViewport( getWindowBounds() );
+	gl::setMatricesWindow( getWindowSize() );
+
+	mEmitterController.render();
+
+	/*
+	if ( mTorrentRef )
+	{
+		Rectf bounds = getWindowBounds();
+		int i = 0;
+		for ( auto peer: mTorrentRef->getPeers() )
+		{
+			shared_ptr< PeerCircle > pcr = std::static_pointer_cast< PeerCircle >( peer );
+			pcr->draw( bounds );
+			//console() << "peer " << i << " " << pcr->getPos() << endl;
+			i++;
+		}
+	}
+	*/
+
+	params::PInterfaceGl::draw();
 }
 
 void SimpleParticlesApp::keyDown( KeyEvent event )

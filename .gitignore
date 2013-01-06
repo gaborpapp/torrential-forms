@@ -12,3 +12,4 @@ press
 visual-experiments/capture.*
 .sconsign.dblite
 *.o
+sc/_compiled.sc
