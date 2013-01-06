@@ -13,3 +13,4 @@ visual-experiments/capture.*
 .sconsign.dblite
 *.o
 sc/_compiled.sc
+geo/scanner/locations.dat
