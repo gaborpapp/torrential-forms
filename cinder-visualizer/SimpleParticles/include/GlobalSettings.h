@@ -17,6 +17,7 @@ class GlobalSettings
 		float mEmitterRadiusStep;
 		float mEmitterRadiusDamping;
 		float mEmitterRepulsion;
+		float mEmitterRepulsionRadius;
 };
 
 } // namespace tf

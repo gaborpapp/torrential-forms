@@ -105,6 +105,9 @@ void SimpleParticlesApp::setup()
 	mParams.addPersistentParam( "Repulsion",
 			&GlobalSettings::get().mEmitterRepulsion, 10.f,
 			"min=0 max=100 step=.5" );
+	mParams.addPersistentParam( "Repulsion radius",
+			&GlobalSettings::get().mEmitterRepulsionRadius, 1.5f,
+			"min=1 max=20 step=.1" );
 
 	mParams.addSeparator();
 	mParams.addParam( "Fps", &mFps, "", true );

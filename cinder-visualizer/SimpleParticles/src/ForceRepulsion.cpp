@@ -1,10 +1,13 @@
 #include "ForceRepulsion.h"
+#include "GlobalSettings.h"
 
 using namespace ci;
 using std::vector;
 
 void ForceRepulsion::apply( std::vector< EmitterRef > &emitters )
 {
+	float repRadius = tf::GlobalSettings::get().mEmitterRepulsionRadius;
+
 	for ( auto pit0 = emitters.begin(); pit0 != emitters.end(); ++pit0 )
 	{
 		EmitterRef p0 = *pit0;
@@ -16,7 +19,7 @@ void ForceRepulsion::apply( std::vector< EmitterRef > &emitters )
 			{
 				Vec3f dir = p0->mLoc - p1->mLoc;
 				float distSqrd = dir.lengthSquared();
-				float radiusSum = ( p0->mRadius + p1->mRadius ) * 1.5f;
+				float radiusSum = ( p0->mRadius + p1->mRadius ) * repRadius;
 				float radiusSqrd = radiusSum * radiusSum;
 
 				if ( distSqrd < radiusSqrd && distSqrd > .1f )
