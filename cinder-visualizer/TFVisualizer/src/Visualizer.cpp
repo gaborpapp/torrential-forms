@@ -140,9 +140,7 @@ bool Visualizer::handleResetMessage( const mndl::osc::Message &message )
 
 bool Visualizer::handleShutdownMessage( const mndl::osc::Message &message )
 {
-	// FIXME: shutdown does not seem to be called when calling quit()
-	ci::app::App::get()->shutdown();
-	ci::app::App::get()->quit();
+	app::App::get()->dispatchSync( [&] { ci::app::App::get()->quit(); } );
 	return false;
 }
 

@@ -167,7 +167,7 @@ void SimpleParticlesApp::chunkReceived( ChunkRef cr )
 	uint32_t id = Rand::randInt( cr->getPeerId() );
 	auto tr = std::dynamic_pointer_cast< TorrentPuzzle >( mTorrentRef );
 	Vec3f loc = tr->getChunkTargetPos( cr );
-	app::App::get()->dispatchSync( [&] { 
+	app::App::get()->dispatchSync( [&] {
 			mEmitterController.addForceIdAttractor(
 				GlobalSettings::get().mEmitterAttractionMagnitude,
 				GlobalSettings::get().mEmitterAttractionDuration,
